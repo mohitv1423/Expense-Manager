@@ -419,6 +419,68 @@ export const userRouter = createTRPCRouter({
     }),
 
   getWebPushPublicKey: protectedProcedure.query(() => env.WEB_PUSH_PUBLIC_KEY ?? ''),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { hashPassword, verifyPassword, validatePasswordStrength } = await import('~/lib/auth/password');
+
+      const user = await db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { passwordHash: true },
+      });
+
+      if (!user?.passwordHash) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No password set for this account' });
+      }
+
+      const currentValid = await verifyPassword(input.currentPassword, user.passwordHash);
+      if (!currentValid) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Current password is incorrect' });
+      }
+
+      const strength = validatePasswordStrength(input.newPassword);
+      if (!strength.valid) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: strength.errors.join('. ') });
+      }
+
+      const newHash = await hashPassword(input.newPassword);
+      await db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { passwordHash: newHash, forcePasswordChange: false },
+      });
+    }),
+
+  updateProfile: protectedProcedure
+    .input(
+      z.object({
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        image: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const updates: Record<string, unknown> = {};
+      if (input.firstName !== undefined) updates.firstName = input.firstName;
+      if (input.lastName !== undefined) updates.lastName = input.lastName;
+      if (input.image !== undefined) updates.image = input.image;
+      if (input.firstName !== undefined || input.lastName !== undefined) {
+        const current = await db.user.findUnique({
+          where: { id: ctx.session.user.id },
+          select: { firstName: true, lastName: true },
+        });
+        const fn = input.firstName ?? current?.firstName ?? '';
+        const ln = input.lastName ?? current?.lastName ?? '';
+        updates.name = `${fn} ${ln}`.trim();
+      }
+
+      return db.user.update({ where: { id: ctx.session.user.id }, data: updates });
+    }),
 });
 
 export const getUserMap = async (userIds: number[]) => {
