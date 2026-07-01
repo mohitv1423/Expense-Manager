@@ -6,13 +6,11 @@ import {
   DownloadCloud,
   FileDown,
   HeartHandshakeIcon,
-  KeyRound,
   Languages,
-  Shield,
   Star,
 } from 'lucide-react';
 import type { GetServerSideProps } from 'next';
-import { signOut, useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useTranslation } from 'next-i18next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -48,7 +46,6 @@ const AccountPage: NextPageWithUser<{
 }> = ({ feedBackPossible, bankConnectionEnabled, bankConnection, maxUploadFileSizeMB }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const { data: session } = useSession();
   const userQuery = api.user.me.useQuery();
   const downloadQuery = api.user.downloadData.useMutation();
   const updateDetailsMutation = api.user.updateUserDetail.useMutation();
@@ -183,20 +180,6 @@ const AccountPage: NextPageWithUser<{
           </DebugInfo>
         </div>
 
-        <div className="mt-4 flex flex-col gap-4">
-          <AccountButton href="/auth/change-password">
-            <KeyRound className="size-5 text-amber-500" />
-            Change Password
-          </AccountButton>
-
-          {session?.user?.role === 'ADMIN' && (
-            <AccountButton href="/admin">
-              <Shield className="size-5 text-blue-500" />
-              Admin Panel
-            </AccountButton>
-          )}
-        </div>
-
         <div className="mt-2 flex justify-center">
           <Button
             variant="ghost"
@@ -215,7 +198,7 @@ AccountPage.auth = true;
 
 export const getServerSideProps: GetServerSideProps = async (context) => ({
   props: {
-    feedBackPossible: Boolean(env.FEEDBACK_EMAIL),
+    feedbackPossible: Boolean(env.FEEDBACK_EMAIL),
     bankConnectionEnabled: Boolean(isBankConnectionConfigured()),
     bankConnection: whichBankConnectionConfigured(),
     ...(await customServerSideTranslations(context.locale, ['common', 'currencies'])),

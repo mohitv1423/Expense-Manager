@@ -41,17 +41,9 @@ model Session {
 model User {
   id                   Int                  @id @default(autoincrement())
   name                 String?
-  firstName            String?
-  lastName             String?
   email                String?              @unique
   emailVerified        DateTime?
   image                String?
-  passwordHash         String?
-  role                 UserRole             @default(USER)
-  active               Boolean              @default(true)
-  forcePasswordChange  Boolean              @default(false)
-  loginAttempts        Int                  @default(0)
-  lockedUntil          DateTime?
   currency             String               @default("USD")
   defaultCurrency      String?
   preferredLanguage    String               @default("")
@@ -350,23 +342,5 @@ enum SplitType {
   SETTLEMENT
   CURRENCY_CONVERSION
 
-  @@schema("public")
-}
-
-enum UserRole {
-  ADMIN
-  USER
-
-  @@schema("public")
-}
-
-model LoginAttempt {
-  id        Int      @id @default(autoincrement())
-  email     String
-  ipAddress String?
-  success   Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@index([email, createdAt])
   @@schema("public")
 }
